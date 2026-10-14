@@ -23,7 +23,6 @@ const DEFAULT_SECTIONS_VISIBILITY = {
 
 const DEFAULT_SETTINGS = {
   store_name: 'Square Store',
-  template: 'modern_minimal',
   primary_color: '#10b981',
   accent_color: '#059669',
   text_color: '#0f172a',
@@ -50,8 +49,6 @@ const DEFAULT_SETTINGS = {
   social_instagram: '',
   social_facebook: '',
   social_whatsapp: '',
-  seo_title: '',
-  seo_description: '',
   otp_required: true,
   sections_order: DEFAULT_SECTIONS_ORDER,
   sections_visibility: DEFAULT_SECTIONS_VISIBILITY,
@@ -81,14 +78,11 @@ export function useSettings() {
     try {
       setLoading(true);
       const data = await erpApi.getSettings();
-      const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-      const themeParam = urlParams?.get('theme') || urlParams?.get('template');
 
       if (data && typeof data === 'object') {
         setSettings((prev) => ({
           ...prev,
           ...data,
-          template: (isEditor && themeParam) ? themeParam : (data.template || prev.template),
           free_delivery_min: Number(data.free_delivery_min ?? prev.free_delivery_min),
           shipping_fee: Number(data.shipping_fee ?? prev.shipping_fee),
           otp_required: data.otp_required !== false && data.otp_required !== '0',
@@ -107,13 +101,6 @@ export function useSettings() {
   useEffect(() => {
     fetchSettings();
 
-    // URL preview overrides
-    const urlParams = new URLSearchParams(window.location.search);
-    const themeParam = urlParams.get('theme') || urlParams.get('template');
-    if (themeParam) {
-      setSettings((prev) => ({ ...prev, template: themeParam }));
-    }
-
     // Listen for postMessage from ERP Configurator
     const handleMessage = (event) => {
       if (!event.data || typeof event.data !== 'object') return;
@@ -123,7 +110,6 @@ export function useSettings() {
         setSettings((prev) => ({
           ...prev,
           ...payload,
-          template: payload.template || payload.website_template || prev.template,
           sections_order: payload.sections_order ? safeParse(payload.sections_order, prev.sections_order) : prev.sections_order,
           sections_visibility: payload.sections_visibility ? safeParse(payload.sections_visibility, prev.sections_visibility) : prev.sections_visibility,
         }));

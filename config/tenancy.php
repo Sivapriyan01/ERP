@@ -72,6 +72,8 @@ return [
 
     'migration_parameters' => [
         '--force' => true,
+        '--path'  => 'database/migrations/tenant',
+        '--realpath' => false,
     ],
 
     'seeder_parameters' => [

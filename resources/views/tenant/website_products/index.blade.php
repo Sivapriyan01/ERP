@@ -6,8 +6,22 @@
 <div class="space-y-6 md:space-y-8 animate-in fade-in duration-500" x-data="{
     websiteUrl: window.location.protocol + '//' + window.location.hostname + ':5173',
     selected: [],
+    selectAllMatching: false,
+    totalMatching: {{ (int) $products->total() }},
+    pageCount: {{ (int) $products->count() }},
+    pageIds: {{ json_encode($products->pluck('id')->map(fn($id) => (string)$id)->values()->all()) }},
+
+    get isAllPageSelected() {
+        return this.pageIds.length > 0 && this.pageIds.every(id => this.selected.includes(String(id)));
+    },
+
     toggleSelect(id) {
         id = String(id);
+        if (this.selectAllMatching) {
+            this.selectAllMatching = false;
+            this.selected = this.pageIds.filter(pid => pid !== id);
+            return;
+        }
         const idx = this.selected.indexOf(id);
         if (idx > -1) {
             this.selected.splice(idx, 1);
@@ -15,20 +29,57 @@
             this.selected.push(id);
         }
     },
-    toggleAll() {
-        const allBoxes = Array.from(document.querySelectorAll('.product-checkbox-id')).map(el => String(el.value));
-        if (this.selected.length === allBoxes.length && allBoxes.length > 0) {
-            this.selected = [];
+
+    toggleSelectPage() {
+        if (this.isAllPageSelected || this.selectAllMatching) {
+            this.selected = this.selected.filter(id => !this.pageIds.includes(String(id)));
+            this.selectAllMatching = false;
         } else {
-            this.selected = allBoxes;
+            const combined = new Set([...this.selected, ...this.pageIds]);
+            this.selected = Array.from(combined);
         }
     },
+
+    selectAllProductsAcrossPages() {
+        const combined = new Set([...this.selected, ...this.pageIds]);
+        this.selected = Array.from(combined);
+        this.selectAllMatching = true;
+    },
+
+    toggleSelectAllAcrossPages() {
+        if (this.selectAllMatching) {
+            this.clearAllSelection();
+        } else {
+            this.selectAllProductsAcrossPages();
+        }
+    },
+
+    clearAllSelection() {
+        this.selected = [];
+        this.selectAllMatching = false;
+    },
+
     submitBulk(action) {
-        if (this.selected.length === 0) {
+        if (this.selected.length === 0 && !this.selectAllMatching) {
             alert('Please select at least one product using the checkboxes.');
             return;
         }
+
+        let confirmMsg = '';
+        if (this.selectAllMatching) {
+            if (action === 'publish_selected') {
+                confirmMsg = 'Publish ALL ' + this.totalMatching.toLocaleString() + ' products in this view to the website front site?';
+            } else if (action === 'hide_selected') {
+                confirmMsg = 'Hide / Remove ALL ' + this.totalMatching.toLocaleString() + ' products in this view from the website front site?';
+            }
+        }
+
+        if (confirmMsg && !confirm(confirmMsg)) {
+            return;
+        }
+
         document.getElementById('bulk-action-input').value = action;
+        document.getElementById('bulk-select-all-input').value = this.selectAllMatching ? '1' : '0';
         document.getElementById('bulkForm').submit();
     }
 }">
@@ -49,12 +100,21 @@
         </div>
 
         <div class="flex items-center flex-wrap gap-2">
-            <form action="{{ route('tenant.website-products.bulk') }}" method="POST" class="inline" onsubmit="return confirm('Publish ALL store products to the website front site?');">
+            <form action="{{ route('tenant.website-products.bulk') }}" method="POST" class="inline" onsubmit="return confirm('Publish ALL {{ number_format($totalProducts) }} store products to the website front site?');">
                 @csrf
                 <input type="hidden" name="action" value="publish_all">
                 <button type="submit" class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:scale-[1.02]">
                     <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                     <span>Publish All to Front Site</span>
+                </button>
+            </form>
+
+            <form action="{{ route('tenant.website-products.bulk') }}" method="POST" class="inline" onsubmit="return confirm('Hide ALL {{ number_format($totalProducts) }} store products from the website front site?');">
+                @csrf
+                <input type="hidden" name="action" value="hide_all">
+                <button type="submit" class="flex items-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/60 px-4 py-2.5 rounded-2xl font-black text-xs uppercase tracking-wider border border-rose-200 dark:border-rose-900/40 transition-all hover:scale-[1.02]">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/></svg>
+                    <span>Hide All</span>
                 </button>
             </form>
 
@@ -122,6 +182,10 @@
     <form id="bulkForm" action="{{ route('tenant.website-products.bulk') }}" method="POST" class="hidden">
         @csrf
         <input type="hidden" name="action" id="bulk-action-input" value="">
+        <input type="hidden" name="select_all_matching" id="bulk-select-all-input" value="0">
+        <input type="hidden" name="filter" value="{{ request('filter', 'all') }}">
+        <input type="hidden" name="search" value="{{ request('search', '') }}">
+        <input type="hidden" name="category" value="{{ request('category', '') }}">
         <template x-for="id in selected" :key="id">
             <input type="hidden" name="selected_ids[]" :value="id">
         </template>
@@ -131,20 +195,29 @@
     <div class="glass-card p-6 md:p-8 rounded-[2.5rem] space-y-6">
         {{-- Filters & Search Header --}}
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            {{-- Filter Tabs --}}
-            <div class="flex flex-wrap gap-2">
+            {{-- Filter Tabs & Select All Quick Button --}}
+            <div class="flex flex-wrap items-center gap-2">
                 @php $curFilter = request('filter', 'all'); @endphp
                 @foreach([
-                    'all' => 'All Products (' . $totalProducts . ')',
-                    'website' => 'Live on Front Site (' . $liveOnWebsite . ')',
-                    'hidden' => 'Hidden (' . $hiddenProducts . ')',
-                    'instock' => 'In Stock (' . $inStockCount . ')'
+                    'all' => 'All Products (' . number_format($totalProducts) . ')',
+                    'website' => 'Live on Front Site (' . number_format($liveOnWebsite) . ')',
+                    'hidden' => 'Hidden (' . number_format($hiddenProducts) . ')',
+                    'instock' => 'In Stock (' . number_format($inStockCount) . ')'
                 ] as $fKey => $fLabel)
                     <a href="{{ route('tenant.website-products.index', array_merge(request()->query(), ['filter' => $fKey])) }}"
                        class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all {{ $curFilter === $fKey ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100 dark:shadow-none' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
                         {{ $fLabel }}
                     </a>
                 @endforeach
+
+                {{-- Prominent Quick Select All Button --}}
+                <button type="button" 
+                        @click="toggleSelectAllAcrossPages()" 
+                        :class="selectAllMatching ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-200 dark:shadow-none' : 'bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700'"
+                        class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-sm hover:scale-[1.02]">
+                    <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span x-text="selectAllMatching ? '✓ All {{ number_format($products->total()) }} Selected' : 'Select All {{ number_format($products->total()) }} Products'"></span>
+                </button>
             </div>
 
             {{-- Search & Category Filter --}}
@@ -178,40 +251,72 @@
             </form>
         </div>
 
-        {{-- Bulk Selection Bar (Shows whenever 1 or more products are checked) --}}
-        <div x-show="selected.length > 0" x-cloak class="p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl border border-indigo-100 dark:border-indigo-800/50 flex flex-wrap items-center justify-between gap-3 animate-in fade-in duration-300 shadow-sm">
-            <div class="flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse"></span>
-                <span class="text-xs font-black text-indigo-950 dark:text-indigo-200 uppercase tracking-wider">
-                    <span x-text="selected.length"></span> Product<span x-show="selected.length > 1">s</span> Selected
-                </span>
+        {{-- Bulk Selection Bar (Shows whenever products are checked OR select all across pages is active) --}}
+        <div x-show="selected.length > 0 || selectAllMatching" x-cloak class="p-4 bg-indigo-50/90 dark:bg-indigo-950/60 rounded-2xl border border-indigo-200 dark:border-indigo-800/80 flex flex-wrap items-center justify-between gap-4 animate-in fade-in duration-300 shadow-sm">
+            <div class="flex items-center flex-wrap gap-2">
+                <span class="w-3 h-3 rounded-full bg-indigo-600 animate-pulse"></span>
+                <template x-if="selectAllMatching">
+                    <span class="text-xs font-black text-indigo-950 dark:text-indigo-200 uppercase tracking-wider flex items-center gap-2">
+                        <span>All {{ number_format($products->total()) }} Products Selected across all pages</span>
+                        <button type="button" @click="clearAllSelection()" class="text-[10px] underline lowercase text-indigo-600 dark:text-indigo-400 font-bold hover:text-indigo-800">
+                            (click to clear)
+                        </button>
+                    </span>
+                </template>
+                <template x-if="!selectAllMatching">
+                    <div class="flex items-center flex-wrap gap-2 text-xs font-black text-indigo-950 dark:text-indigo-200 uppercase tracking-wider">
+                        <span><span x-text="selected.length"></span> Product<span x-show="selected.length > 1">s</span> Selected (This Page)</span>
+                        @if($products->total() > $products->count())
+                        <button type="button" 
+                                @click="selectAllProductsAcrossPages()" 
+                                class="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg transition shadow-sm">
+                            👉 Select all {{ number_format($products->total()) }} products across all pages
+                        </button>
+                        @endif
+                    </div>
+                </template>
             </div>
-            <div class="flex items-center gap-2">
-                <button type="button" @click="submitBulk('publish_selected')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition shadow-md shadow-indigo-200 dark:shadow-none hover:scale-[1.02]">
-                    + Add Selected to Front Site
+
+            <div class="flex items-center flex-wrap gap-2">
+                <button type="button" @click="submitBulk('publish_selected')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition shadow-md shadow-indigo-200 dark:shadow-none hover:scale-[1.02] flex items-center gap-1.5">
+                    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                    <span x-text="selectAllMatching ? '+ Add All {{ number_format($products->total()) }} to Front Site' : '+ Add Selected to Front Site'"></span>
                 </button>
-                <button type="button" @click="submitBulk('hide_selected')" class="bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition hover:scale-[1.02]">
-                    Hide Selected
+                <button type="button" @click="submitBulk('hide_selected')" class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition hover:scale-[1.02] flex items-center gap-1.5 shadow-sm">
+                    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                    <span x-text="selectAllMatching ? 'Hide All {{ number_format($products->total()) }} from Front Site' : 'Hide Selected'"></span>
                 </button>
-                <button type="button" @click="selected = []" class="text-slate-500 hover:text-slate-700 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider px-2 py-1">
+                <button type="button" @click="clearAllSelection()" class="text-slate-500 hover:text-slate-700 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition">
                     Deselect All
                 </button>
             </div>
         </div>
 
-        {{-- Products Table (Clean, independent, NO outer form) --}}
+        {{-- Products Table --}}
         <div class="overflow-x-auto rounded-2xl border border-slate-100 dark:border-slate-800/80">
             <table class="w-full text-left">
                 <thead>
                     <tr class="bg-slate-50/70 dark:bg-slate-900/70 border-b border-slate-100 dark:border-slate-800">
                         <th class="px-5 py-4 w-12 text-center">
                             <input type="checkbox" 
-                                   :checked="selected.length > 0 && selected.length === {{ $products->count() }}"
-                                   @click="toggleAll()" 
+                                   :checked="isAllPageSelected || selectAllMatching"
+                                   @change="toggleSelectPage()" 
                                    title="Select / Deselect all products on this page"
                                    class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-4 h-4">
                         </th>
-                        <th class="px-5 py-4 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Product Information</th>
+                        <th class="px-5 py-4 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                            <div class="flex items-center gap-2">
+                                <span>Product Information</span>
+                                <button type="button" 
+                                        @click="selectAllProductsAcrossPages()" 
+                                        x-show="!selectAllMatching" 
+                                        title="Select all {{ number_format($products->total()) }} products across all pages"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 text-[9px] font-black uppercase tracking-wider transition">
+                                    <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    <span>Select All ({{ number_format($products->total()) }})</span>
+                                </button>
+                            </div>
+                        </th>
                         <th class="px-5 py-4 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Brand / Category</th>
                         <th class="px-5 py-4 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Price / MRP</th>
                         <th class="px-5 py-4 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Stock Level</th>
@@ -221,14 +326,14 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                     @forelse($products as $product)
-                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors {{ $product->show_on_website ? 'bg-indigo-50/20 dark:bg-indigo-950/10' : '' }}">
+                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors {{ $product->show_on_website ? 'bg-indigo-50/20 dark:bg-indigo-950/10' : '' }}"
+                            :class="selected.includes('{{ $product->id }}') || selectAllMatching ? 'bg-indigo-50/40 dark:bg-indigo-900/20' : ''">
                             {{-- Checkbox Column --}}
                             <td class="px-5 py-4 text-center">
-                                <input type="hidden" class="product-checkbox-id" value="{{ $product->id }}">
                                 <input type="checkbox" 
                                        value="{{ $product->id }}" 
-                                       :checked="selected.includes('{{ $product->id }}')" 
-                                       @click.stop="toggleSelect('{{ $product->id }}')" 
+                                       :checked="selected.includes('{{ $product->id }}') || selectAllMatching" 
+                                       @change="toggleSelect('{{ $product->id }}')" 
                                        class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-4 h-4">
                             </td>
 
@@ -334,7 +439,7 @@
         @if($products->hasPages())
         <div class="pt-4 flex items-center justify-between">
             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Showing {{ $products->firstItem() }} - {{ $products->lastItem() }} of {{ $products->total() }} store products
+                Showing {{ $products->firstItem() }} - {{ $products->lastItem() }} of {{ number_format($products->total()) }} store products
             </p>
             <div>
                 {{ $products->links() }}

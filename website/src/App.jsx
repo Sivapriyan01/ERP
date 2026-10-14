@@ -10,6 +10,9 @@
 import React, { Suspense } from 'react';
 import { useSettings } from './themes/common/useSettings';
 import { getTheme } from './themes/index.js';
+import { CustomerAuthProvider } from './themes/common/useCustomerAuth';
+import CustomerAuthModal from './themes/common/CustomerAuthModal';
+import AccountModal from './themes/common/AccountModal';
 
 // ── Loading screen shown while settings & theme chunk load ────────
 function SplashLoader() {
@@ -70,24 +73,34 @@ export default function App() {
     toggleSectionVisibility,
   } = useSettings();
 
+  // Document title synchronization
+  React.useEffect(() => {
+    if (!settings) return;
+    document.title = settings.website_company_name || settings.store_name || 'Store';
+  }, [settings]);
+
   if (loading) return <SplashLoader />;
 
-  // Resolve the active theme (settings.template comes from ERP /api/v1/settings)
-  const themeId = settings.template || 'modern_minimal';
-  const themeEntry = getTheme(themeId);
+  // Storefront theme component
+  const themeEntry = getTheme();
   const ThemeComponent = themeEntry.component;
+  const primaryColor = settings.website_primary_color || settings.primary_color || '#217a6e';
 
   return (
     <ThemeErrorBoundary>
-      <Suspense fallback={<SplashLoader />}>
-        <ThemeComponent
-          settings={settings}
-          updateField={updateField}
-          reorderSections={reorderSections}
-          toggleSectionVisibility={toggleSectionVisibility}
-          isEditor={isEditor}
-        />
-      </Suspense>
+      <CustomerAuthProvider>
+        <Suspense fallback={<SplashLoader />}>
+          <ThemeComponent
+            settings={settings}
+            updateField={updateField}
+            reorderSections={reorderSections}
+            toggleSectionVisibility={toggleSectionVisibility}
+            isEditor={isEditor}
+          />
+        </Suspense>
+        <CustomerAuthModal primaryColor={primaryColor} />
+        <AccountModal primaryColor={primaryColor} settings={settings} />
+      </CustomerAuthProvider>
     </ThemeErrorBoundary>
   );
 }

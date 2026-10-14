@@ -384,6 +384,27 @@ class BillingController extends Controller
                         'payment_mode' => 'Customer does not have enough wallet balance.'
                     ]);
                 }
+            } elseif (strtolower($bill->payment_mode) === 'gift_card') {
+                $gcCode = strtoupper(trim($request->input('gift_card_code', '')));
+                if ($gcCode) {
+                    $gc = \App\Models\GiftCard::where('code', $gcCode)->first();
+                    if ($gc && $gc->status === 'active' && $gc->current_balance > 0) {
+                        $deduct = min($gc->current_balance, $bill->grand_total);
+                        $gc->decrement('current_balance', $deduct);
+                        if ($gc->current_balance <= 0) {
+                            $gc->update([
+                                'status' => 'redeemed',
+                                'redeemed_at' => now(),
+                                'redeemed_by_customer_id' => $customer?->id,
+                            ]);
+                        }
+                        $existingRemarks = $bill->remarks ?? '';
+                        $bill->update([
+                            'paid_amount' => $deduct,
+                            'remarks' => trim($existingRemarks . " [Gift Card {$gc->code}: ₹{$deduct}]"),
+                        ]);
+                    }
+                }
             } elseif (!$request->filled('amount_paid')) {
                 // For other modes, assume full payment if not provided
                 $bill->update(['paid_amount' => $bill->grand_total]);

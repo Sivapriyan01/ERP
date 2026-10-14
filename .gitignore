@@ -36,3 +36,14 @@ Thumbs.db
 session_cookie.txt
 c.txt
 reset_password.php
+
+# Temporary debug scripts
+scratch/
+tmp_*.php
+check_*.php
+scratch_*.php
+test_transfer.php
+server_tmp.php
+list_tables.php
+repair_user.php
+seed_processes.php

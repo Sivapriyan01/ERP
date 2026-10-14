@@ -11,12 +11,18 @@ class Msg91Service
     protected string $baseUrl = 'https://control.msg91.com/api/v5';
     protected ?string $authKey;
     protected ?string $templateId;
+    protected ?string $senderId;
+    protected int $defaultExpiry;
+    protected int $defaultLength;
 
-    public function __construct()
+    public function __construct(?string $authKey = null, ?string $templateId = null)
     {
-        // Read from tenant Setting first, fall back to config / env
-        $this->authKey = Setting::get('msg91_auth_key', config('services.msg91.auth_key', env('MSG91_AUTH_KEY', '')));
-        $this->templateId = Setting::get('msg91_template_id', config('services.msg91.template_id', env('MSG91_TEMPLATE_ID', '')));
+        // Read from arguments or tenant Setting first, fall back to config / env
+        $this->authKey = $authKey ?? Setting::get('msg91_auth_key', config('services.msg91.auth_key', env('MSG91_AUTH_KEY', '')));
+        $this->templateId = $templateId ?? Setting::get('msg91_template_id', config('services.msg91.template_id', env('MSG91_TEMPLATE_ID', '')));
+        $this->senderId = Setting::get('msg91_dlt_sender_id', env('MSG91_SENDER_ID', ''));
+        $this->defaultExpiry = (int) Setting::get('msg91_otp_expiry', env('MSG91_OTP_EXPIRY', 10));
+        $this->defaultLength = (int) Setting::get('msg91_otp_length', env('MSG91_OTP_LENGTH', 4));
     }
 
     /**
@@ -24,7 +30,8 @@ class Msg91Service
      */
     public function isConfigured(): bool
     {
-        return !empty($this->authKey);
+        $key = $this->authKey ?: Setting::get('msg91_auth_key', config('services.msg91.auth_key', env('MSG91_AUTH_KEY', '')));
+        return !empty($key);
     }
 
     /**
@@ -48,16 +55,22 @@ class Msg91Service
      *
      * @param string $mobile Customer phone number
      * @param string|null $otp Optional custom OTP code (if omitted, MSG91 generates one)
-     * @param int $expiryMinutes OTP expiry time in minutes (default: 10)
-     * @param int $otpLength Length of OTP (default: 4)
+     * @param int|null $expiryMinutes OTP expiry time in minutes (default from settings)
+     * @param int|null $otpLength Length of OTP (default from settings)
      * @return array
      */
-    public function sendOtp(string $mobile, ?string $otp = null, int $expiryMinutes = 10, int $otpLength = 4): array
+    public function sendOtp(string $mobile, ?string $otp = null, ?int $expiryMinutes = null, ?int $otpLength = null): array
     {
-        if (empty($this->authKey)) {
+        $authKey = $this->authKey ?: Setting::get('msg91_auth_key', config('services.msg91.auth_key', env('MSG91_AUTH_KEY', '')));
+        $templateId = $this->templateId ?: Setting::get('msg91_template_id', config('services.msg91.template_id', env('MSG91_TEMPLATE_ID', '')));
+        $senderId = $this->senderId ?: Setting::get('msg91_dlt_sender_id', env('MSG91_SENDER_ID', ''));
+        $expiry = $expiryMinutes ?? (int) Setting::get('msg91_otp_expiry', $this->defaultExpiry ?: 10);
+        $length = $otpLength ?? (int) Setting::get('msg91_otp_length', $this->defaultLength ?: 4);
+
+        if (empty($authKey)) {
             return [
                 'success' => false,
-                'message' => 'MSG91 Auth Key is missing. Please set MSG91_AUTH_KEY in your configuration.',
+                'message' => 'MSG91 Auth Key is missing. Please set MSG91 Auth Key in Website Settings.',
             ];
         }
 
@@ -65,22 +78,28 @@ class Msg91Service
 
         $payload = [
             'mobile'      => $phone,
-            'otp_expiry'  => $expiryMinutes,
-            'otp_length'  => $otpLength,
+            'otp_expiry'  => $expiry,
+            'otp_length'  => $length,
         ];
 
-        // Only attach template_id if it is a real DLT template, not a 24-character Widget ID
-        if (!empty($this->templateId) && strlen($this->templateId) !== 24 && $this->templateId !== '36697164476b323432353839') {
-            $payload['template_id'] = $this->templateId;
+        // Attach template_id if provided
+        if (!empty($templateId)) {
+            $payload['template_id'] = $templateId;
+        }
+
+        // Attach DLT sender ID if provided
+        if (!empty($senderId)) {
+            $payload['sender'] = $senderId;
         }
 
         if ($otp !== null && $otp !== '') {
             $payload['otp'] = $otp;
+            $payload['OTP'] = $otp;
         }
 
         try {
             $response = Http::withoutVerifying()->withHeaders([
-                'authkey'      => $this->authKey,
+                'authkey'      => $authKey,
                 'Content-Type' => 'application/json',
                 'Accept'       => 'application/json',
             ])->timeout(15)->post($this->baseUrl . '/otp?' . http_build_query($payload));
@@ -88,9 +107,10 @@ class Msg91Service
             $body = $response->json() ?? [];
 
             Log::info('MSG91 Send OTP response', [
-                'mobile' => $phone,
-                'status' => $response->status(),
-                'body'   => $body,
+                'mobile'  => $phone,
+                'status'  => $response->status(),
+                'payload' => $payload,
+                'body'    => $body,
             ]);
 
             $isSuccess = $response->successful() && (($body['type'] ?? '') === 'success' || strtolower($body['message'] ?? '') === 'otp sent successfully');

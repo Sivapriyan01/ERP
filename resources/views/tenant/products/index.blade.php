@@ -11,6 +11,10 @@
             <p class="text-sm text-slate-500 mt-1">Manage your inventory and product catalogue.</p>
         </div>
         <div class="flex items-center gap-2">
+            <a href="{{ route('tenant.website-products.index') }}" class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest text-center shadow-xl shadow-indigo-100 dark:shadow-none hover:scale-[1.02] transition flex items-center gap-1.5 justify-center">
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+                <span>Website Products</span>
+            </a>
             <button type="button" onclick="document.getElementById('importModal').classList.remove('hidden')" class="w-full md:w-auto bg-slate-800 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest text-center shadow-xl shadow-slate-200 hover:scale-[1.02] transition dark:bg-slate-700 dark:shadow-none">
                 Import
             </button>
@@ -82,6 +86,10 @@
                         <span class="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>
                         Website ({{ $products->filter(fn($p) => $p->show_on_website)->count() }})
                     </button>
+                    <button type="button" @click="filterWebsite = 'hidden'" :class="filterWebsite === 'hidden' ? 'bg-slate-800 dark:bg-slate-600 text-white shadow-sm' : 'text-slate-500'" class="px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                        Hidden ({{ $products->filter(fn($p) => !$p->show_on_website)->count() }})
+                    </button>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -103,7 +111,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-50 dark:divide-slate-800">
                     @forelse ($products as $product)
-                        <tr x-show="(filterWebsite === 'all' || (filterWebsite === 'website' && {{ $product->show_on_website ? 'true' : 'false' }})) && (!searchQuery || '{{ strtolower(addslashes($product->product_name . ' ' . $product->brand . ' ' . $product->barcode)) }}'.includes(searchQuery.toLowerCase()))" class="hover:bg-fuchsia-50/30 dark:hover:bg-slate-950/30 transition-colors">
+                        <tr x-show="(filterWebsite === 'all' || (filterWebsite === 'website' && {{ $product->show_on_website ? 'true' : 'false' }}) || (filterWebsite === 'hidden' && {{ !$product->show_on_website ? 'true' : 'false' }})) && (!searchQuery || '{{ strtolower(addslashes($product->product_name . ' ' . $product->brand . ' ' . $product->barcode)) }}'.includes(searchQuery.toLowerCase()))" class="hover:bg-fuchsia-50/30 dark:hover:bg-slate-950/30 transition-colors">
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
                                     <div class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-850 flex items-center justify-center overflow-hidden">
@@ -144,10 +152,10 @@
                                 <form action="{{ route('tenant.products.toggle-website', $product->id) }}" method="POST" class="inline">
                                     @csrf
                                     <button type="submit" 
-                                            title="{{ $product->show_on_website ? 'Live on website. Click to hide.' : 'Hidden from website. Click to publish.' }}"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all {{ $product->show_on_website ? 'bg-indigo-100 text-indigo-700 hover:bg-rose-100 hover:text-rose-700 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-slate-100 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 dark:bg-slate-800 dark:text-slate-500' }}">
+                                            title="{{ $product->show_on_website ? 'Live on website. Click to remove/hide from website.' : 'Hidden from website. Click to remove from hide / publish to website.' }}"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all {{ $product->show_on_website ? 'bg-indigo-100 text-indigo-700 hover:bg-rose-100 hover:text-rose-700 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-slate-100 text-slate-500 hover:bg-emerald-100 hover:text-emerald-700 dark:bg-slate-800 dark:text-slate-400' }}">
                                         <span class="w-1.5 h-1.5 rounded-full {{ $product->show_on_website ? 'bg-indigo-600 animate-pulse' : 'bg-slate-400' }}"></span>
-                                        {{ $product->show_on_website ? 'On Website' : 'Off' }}
+                                        {{ $product->show_on_website ? 'On Website' : 'Hidden (Unhide)' }}
                                     </button>
                                 </form>
                             </td>

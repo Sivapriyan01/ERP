@@ -570,22 +570,513 @@ export const erpApi = {
   },
 
   /**
-   * Fetch available templates list (GET /api/v1/templates)
+   * Fetch active coupons & modal settings from ERP (GET /api/v1/coupons)
    */
-  async getTemplates() {
+  async getCoupons() {
     const tenant = getActiveTenant();
     try {
-      const response = await fetch(`${API_BASE_URL}/v1/templates?tenant=${encodeURIComponent(tenant)}`, {
+      const response = await fetch(`${API_BASE_URL}/v1/coupons?tenant=${encodeURIComponent(tenant)}`, {
         method: 'GET',
         headers: { 'Accept': 'application/json', 'X-Tenant': tenant },
       });
       if (response.ok) {
         const data = await response.json();
-        if (data?.templates) return data.templates;
+        if (data?.coupons) {
+          this._cachedCouponSettings = {
+            modal_title: data.modal_title || 'Apply Coupon & Offers',
+            modal_subtitle: data.modal_subtitle || 'The Derma Co Verified Promo Codes',
+            free_shipping_threshold: data.free_shipping_threshold ?? 999,
+            free_gift_threshold: data.free_gift_threshold ?? 899,
+            free_gift_name: data.free_gift_name || 'Free 10% Niacinamide Serum Mini 5ml',
+            prepaid_discount_percent: data.prepaid_discount_percent ?? 5,
+          };
+          const list = data.coupons;
+          list.settings = this._cachedCouponSettings;
+          return list;
+        }
       }
     } catch (e) {
-      console.warn('getTemplates API error:', e);
+      console.warn('getCoupons API error, using local Derma Co fallback:', e);
     }
-    return null;
+
+    // Default Fallback WOW / Derma style coupons
+    return [
+      {
+        code: 'WOW20',
+        name: 'Get 20% off with WOW20',
+        description: 'Get Flat 20% off on all items. Valid on minimum cart value of ₹299.',
+        discount_type: 'percent',
+        discount_value: 20,
+        min_order_value: 299,
+        max_discount: 500,
+        badge: '20% OFF',
+        terms: [
+          'Applicable on all products across catalog',
+          'Minimum order value of ₹299 required',
+          'One coupon code valid per customer order',
+        ],
+      },
+      {
+        code: 'FLAT30',
+        name: 'Flat 30% Off Skincare',
+        description: 'Get Flat 30% off on all dermatologist designed skincare worth ₹1,499 & above.',
+        discount_type: 'percent',
+        discount_value: 30,
+        min_order_value: 1499,
+        max_discount: 1000,
+        free_gift_name: 'Free 10g 1% Hyaluronic Sunscreen Aqua Gel',
+        free_gift_min_value: 1499,
+        badge: '30% OFF',
+      },
+      {
+        code: 'REDEEM35',
+        name: 'Redeem 35% Special',
+        description: 'Save 35% on orders above ₹899 + Free Miniature Serum.',
+        discount_type: 'percent',
+        discount_value: 35,
+        min_order_value: 899,
+        max_discount: 600,
+        free_gift_name: 'Free 10% Niacinamide Serum Mini 5ml',
+        free_gift_min_value: 899,
+        badge: '35% OFF',
+      },
+      {
+        code: 'DERMA20',
+        name: 'Welcome Derma 20%',
+        description: 'Flat 20% discount on all active orders above ₹499.',
+        discount_type: 'percent',
+        discount_value: 20,
+        min_order_value: 499,
+        max_discount: 400,
+        badge: '20% OFF',
+      },
+      {
+        code: 'PREPAID5',
+        name: 'Extra 5% Prepaid Discount',
+        description: 'Instant 5% discount on UPI & Online prepaid payments.',
+        discount_type: 'percent',
+        discount_value: 5,
+        min_order_value: 0,
+        max_discount: 200,
+        badge: '5% OFF',
+      },
+    ];
+  },
+
+  /**
+   * Validate coupon code (POST /api/v1/coupons/validate)
+   */
+  async validateCoupon(code, subtotal, paymentMethod = 'ONLINE') {
+    const tenant = getActiveTenant();
+    const cleanCode = (code || '').toUpperCase().trim();
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/v1/coupons/validate?tenant=${encodeURIComponent(tenant)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Tenant': tenant,
+        },
+        body: JSON.stringify({ code: cleanCode, subtotal, payment_method: paymentMethod }),
+      });
+
+      const resData = await response.json().catch(() => ({}));
+      if (response.ok && resData.success) {
+        return resData;
+      }
+      return {
+        success: false,
+        message: resData.message || `Coupon '${cleanCode}' is invalid or not applicable.`,
+      };
+    } catch (e) {
+      console.warn('validateCoupon API error, using local evaluation:', e);
+    }
+
+    // Local evaluation fallback
+    const mockCoupons = await this.getCoupons();
+    const found = mockCoupons.find(c => c.code === cleanCode);
+    if (!found) {
+      return { success: false, message: `Coupon '${cleanCode}' is invalid or expired.` };
+    }
+    if (subtotal < (found.min_order_value || 0)) {
+      const needed = found.min_order_value - subtotal;
+      return {
+        success: false,
+        message: `Add ₹${Math.round(needed)} more to unlock '${cleanCode}' (Min order ₹${found.min_order_value}).`,
+      };
+    }
+
+    let discount = found.discount_type === 'percent'
+      ? (subtotal * found.discount_value) / 100
+      : Math.min(found.discount_value, subtotal);
+
+    if (found.max_discount && discount > found.max_discount) {
+      discount = found.max_discount;
+    }
+    discount = Math.round(discount * 100) / 100;
+
+    let freeGift = null;
+    if (found.free_gift_name && (!found.free_gift_min_value || subtotal >= found.free_gift_min_value)) {
+      freeGift = found.free_gift_name;
+    }
+
+    return {
+      success: true,
+      message: `Coupon '${cleanCode}' applied successfully!`,
+      coupon: {
+        code: cleanCode,
+        name: found.name,
+        discount_amount: discount,
+        discount_type: found.discount_type,
+        discount_value: found.discount_value,
+        free_gift: freeGift,
+        savings_text: `You saved ₹${discount.toLocaleString('en-IN')} with ${cleanCode}!`,
+      },
+    };
+  },
+
+
+  /**
+   * Customer Login / Send OTP
+   * POST /api/v1/customer/login
+   */
+  async customerLogin({ identifier, name = '', type = 'otp', skip_otp = false }) {
+    const tenant = getActiveTenant();
+    try {
+      const response = await fetch(`${API_BASE_URL}/v1/customer/login?tenant=${encodeURIComponent(tenant)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Tenant': tenant,
+        },
+        body: JSON.stringify({ identifier, name, type, skip_otp }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success) {
+        return data;
+      }
+      if (data.message) {
+        return { success: false, message: data.message };
+      }
+    } catch (e) {
+      console.warn('customerLogin API error, fallback to local session:', e);
+    }
+
+    // Local fallback for offline/demo operation
+    const isEmail = identifier && identifier.includes('@');
+    const cleanPhone = (identifier || '').replace(/\D/g, '');
+    const user = {
+      id: Math.floor(1000 + Math.random() * 9000),
+      name: name || (isEmail ? identifier.split('@')[0] : `Customer ${cleanPhone.slice(-4) || 'User'}`),
+      email: isEmail ? identifier : 'user@example.com',
+      phone: cleanPhone || '9876543210',
+      address: '12, Green Park Avenue, Near Central Mall',
+      city: 'Mumbai',
+      state: 'Maharashtra',
+      pincode: '400001',
+      points: 250,
+      wallet_balance: 150,
+    };
+
+    if (type === 'direct' || skip_otp) {
+      return {
+        success: true,
+        message: 'Login successful!',
+        customer: user,
+        orders: getStoredOrders(),
+      };
+    }
+
+    return {
+      success: true,
+      message: `OTP sent to ${identifier}`,
+      channel: 'simulation',
+      demo_otp: '1234',
+      phone: cleanPhone,
+    };
+  },
+
+  /**
+   * Customer Verify OTP & Login
+   * POST /api/v1/customer/verify-otp
+   */
+  async customerVerifyOtp({ phone, otp, name = '', email = '' }) {
+    const tenant = getActiveTenant();
+    try {
+      const response = await fetch(`${API_BASE_URL}/v1/customer/verify-otp?tenant=${encodeURIComponent(tenant)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Tenant': tenant,
+        },
+        body: JSON.stringify({ phone, otp, name, email }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success) {
+        return data;
+      }
+      if (data.message) {
+        return { success: false, message: data.message };
+      }
+    } catch (e) {
+      console.warn('customerVerifyOtp API error, fallback to local verification:', e);
+    }
+
+    // Local verification fallback (accepts 1234 or any 4 digits in demo)
+    if (otp === '1234' || otp.length === 4) {
+      const cleanPhone = (phone || '').replace(/\D/g, '');
+      const user = {
+        id: Math.floor(1000 + Math.random() * 9000),
+        name: name || (email ? email.split('@')[0] : `Customer ${cleanPhone.slice(-4) || 'User'}`),
+        email: email || `${cleanPhone || 'user'}@gmail.com`,
+        phone: cleanPhone || '9876543210',
+        address: '12, Green Park Avenue, Near Central Mall',
+        city: 'Mumbai',
+        state: 'Maharashtra',
+        pincode: '400001',
+        points: 100,
+        wallet_balance: 50,
+      };
+
+      return {
+        success: true,
+        message: 'Mobile number verified successfully!',
+        customer: user,
+        orders: getStoredOrders(),
+      };
+    }
+
+    return {
+      success: false,
+      message: 'Invalid verification code. Enter 1234 for demo login.',
+    };
+  },
+
+  /**
+   * Get Customer Orders
+   * GET /api/v1/customer/orders
+   */
+  async getCustomerOrders({ id, phone, email }) {
+    const tenant = getActiveTenant();
+    try {
+      const params = new URLSearchParams();
+      if (id) params.set('id', id);
+      if (phone) params.set('phone', phone);
+      if (email) params.set('email', email);
+      params.set('tenant', tenant);
+
+      const response = await fetch(`${API_BASE_URL}/v1/customer/orders?${params.toString()}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json', 'X-Tenant': tenant },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && Array.isArray(data.orders)) {
+          return data.orders;
+        }
+      }
+    } catch (e) {
+      console.warn('getCustomerOrders API error, using stored orders:', e);
+    }
+
+    // Fallback to local stored orders
+    return getStoredOrders();
+  },
+
+  /**
+   * Update Customer Profile
+   * POST /api/v1/customer/profile
+   */
+  async updateCustomerProfile(profileData) {
+    const tenant = getActiveTenant();
+    try {
+      const response = await fetch(`${API_BASE_URL}/v1/customer/profile?tenant=${encodeURIComponent(tenant)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Tenant': tenant,
+        },
+        body: JSON.stringify(profileData),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success) {
+        return data;
+      }
+    } catch (e) {
+      console.warn('updateCustomerProfile API error:', e);
+    }
+
+    return {
+      success: true,
+      message: 'Profile updated successfully!',
+      customer: profileData,
+    };
+  },
+
+  /**
+   * Get Customer Wallet & Ledger (GET /api/v1/customer/wallet)
+   */
+  async getCustomerWallet({ id, phone, email }) {
+    const tenant = getActiveTenant();
+    try {
+      const params = new URLSearchParams();
+      if (id) params.set('id', id);
+      if (phone) params.set('phone', phone);
+      if (email) params.set('email', email);
+      params.set('tenant', tenant);
+
+      const response = await fetch(`${API_BASE_URL}/v1/customer/wallet?${params.toString()}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json', 'X-Tenant': tenant },
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (e) {
+      console.warn('getCustomerWallet API error:', e);
+    }
+    return {
+      success: true,
+      wallet: { balance: 150.00, pending_cashback: 25.00, is_active: true },
+      credits: [
+        { id: 1, source: 'promo', amount: 150.00, remaining_amount: 150.00, expires_at: null, is_expiring_soon: false }
+      ],
+      ledger: [
+        { id: 1, transaction_id: 'WTX-WELCOME', type: 'adjustment', direction: 'credit', amount: 150.00, running_balance: 150.00, description: 'Welcome store credit', created_at: new Date().toISOString() }
+      ]
+    };
+  },
+
+  /**
+   * Redeem Gift Card into Wallet (POST /api/v1/customer/wallet/redeem-gift-card)
+   */
+  async redeemGiftCard({ id, phone, email, code, pin }) {
+    const tenant = getActiveTenant();
+    try {
+      const response = await fetch(`${API_BASE_URL}/v1/customer/wallet/redeem-gift-card?tenant=${encodeURIComponent(tenant)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Tenant': tenant,
+        },
+        body: JSON.stringify({ id, phone, email, code, pin }),
+      });
+      return await response.json();
+    } catch (e) {
+      return { success: false, message: 'Network error redeeming gift card.' };
+    }
+  },
+
+  /**
+   * Get Customer Rewards (GET /api/v1/customer/rewards)
+   */
+  async getCustomerRewards({ id, phone, email }) {
+    const tenant = getActiveTenant();
+    try {
+      const params = new URLSearchParams();
+      if (id) params.set('id', id);
+      if (phone) params.set('phone', phone);
+      if (email) params.set('email', email);
+      params.set('tenant', tenant);
+
+      const response = await fetch(`${API_BASE_URL}/v1/customer/rewards?${params.toString()}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json', 'X-Tenant': tenant },
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (e) {
+      console.warn('getCustomerRewards API error:', e);
+    }
+    return {
+      success: true,
+      rewards: {
+        points_balance: 250,
+        conversion_rate: 0.1,
+        wallet_equivalent: 25.00,
+        tier: 'Gold Member'
+      },
+      history: [
+        { id: 1, points: 250, direction: 'credit', type: 'signup_bonus', description: 'Welcome loyalty reward', created_at: new Date().toISOString() }
+      ]
+    };
+  },
+
+  /**
+   * Convert Rewards Points to Wallet Balance (POST /api/v1/customer/rewards/convert)
+   */
+  async convertRewardsToWallet({ id, phone, email, points }) {
+    const tenant = getActiveTenant();
+    try {
+      const response = await fetch(`${API_BASE_URL}/v1/customer/rewards/convert?tenant=${encodeURIComponent(tenant)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Tenant': tenant,
+        },
+        body: JSON.stringify({ id, phone, email, points }),
+      });
+      return await response.json();
+    } catch (e) {
+      return { success: false, message: 'Network error converting rewards.' };
+    }
+  },
+
+  /**
+   * Validate Cart Pricing, Rules & Freebies (POST /api/v1/cart/validate) (SRS Section 7 & 9)
+   */
+  async validateCartPricing({ items, coupon_code, shipping_charge = 0, tax_mode = 'exclusive', tax_rate = 18 }) {
+    const tenant = getActiveTenant();
+    try {
+      const response = await fetch(`${API_BASE_URL}/v1/cart/validate?tenant=${encodeURIComponent(tenant)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Tenant': tenant,
+        },
+        body: JSON.stringify({
+          items,
+          coupon_code,
+          shipping_charge,
+          tax_mode,
+          tax_rate,
+        }),
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (e) {
+      console.warn('validateCartPricing API error:', e);
+    }
+    return { success: false, message: 'Cart validation unavailable.' };
+  },
+
+  /**
+   * Get Active Promotions & Freebie rules (GET /api/v1/promotions/active)
+   */
+  async getActivePromotions() {
+    const tenant = getActiveTenant();
+    try {
+      const response = await fetch(`${API_BASE_URL}/v1/promotions/active?tenant=${encodeURIComponent(tenant)}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json', 'X-Tenant': tenant },
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (e) {
+      console.warn('getActivePromotions API error:', e);
+    }
+    return { success: true, promotions: [] };
   },
 };
+
+

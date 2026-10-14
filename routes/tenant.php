@@ -41,6 +41,11 @@ Route::middleware(['tenant_web'])->group(function () {
     Route::post('/public/leads/{slug}', [\App\Http\Controllers\Tenant\CrmPublicController::class, 'submit'])->name('crm.public.submit');
     Route::get('/public/invoice/{bill}', [\App\Http\Controllers\Tenant\BillingController::class, 'publicInvoice'])->name('tenant.public.invoice');
 
+    // Time-Limited HMAC Signed Agreement View (SRS Section 14 & 18)
+    Route::get('/agreements/{agreement}/secure-view', [\App\Http\Controllers\Tenant\AgreementController::class, 'secureView'])->name('tenant.agreements.secure-view');
+
+
+
     // Securely serve tenant assets from their sandboxed storage
     Route::get('/tenancy/assets/{path}', function ($path) {
         $realPath = storage_path('app/public/' . $path);
@@ -88,15 +93,27 @@ Route::middleware(['tenant_web', 'auth:tenant'])->group(function () {
     Route::post('/website-products/{id}/toggle', [\App\Http\Controllers\Tenant\WebsiteProductsController::class, 'toggle'])->name('tenant.website-products.toggle');
     Route::get('/website-settings', [\App\Http\Controllers\Tenant\WebsiteSettingsController::class, 'index'])->name('tenant.website-settings.index');
     Route::post('/website-settings', [\App\Http\Controllers\Tenant\WebsiteSettingsController::class, 'update'])->name('tenant.website-settings.update');
+    Route::post('/website-settings/test-sms', [\App\Http\Controllers\Tenant\WebsiteSettingsController::class, 'testSms'])->name('tenant.website-settings.test-sms');
+    Route::post('/website-settings/seed-samples', [\App\Http\Controllers\Tenant\WebsiteSettingsController::class, 'seedSamples'])->name('tenant.website-settings.seed-samples');
 
-    // Website Template Management & Configurator
-    Route::get('/website-templates',             [\App\Http\Controllers\Tenant\WebsiteTemplatesController::class, 'index'])->name('tenant.website-templates.index');
-    Route::post('/website-templates/active',     [\App\Http\Controllers\Tenant\WebsiteTemplatesController::class, 'setActive'])->name('tenant.website-templates.set-active');
-    Route::get('/website-templates/configurator',[\App\Http\Controllers\Tenant\WebsiteTemplatesController::class, 'configurator'])->name('tenant.website-templates.configurator');
-    Route::post('/website-templates/draft',      [\App\Http\Controllers\Tenant\WebsiteTemplatesController::class, 'saveDraft'])->name('tenant.website-templates.save-draft');
-    Route::post('/website-templates/publish',    [\App\Http\Controllers\Tenant\WebsiteTemplatesController::class, 'publish'])->name('tenant.website-templates.publish');
-    Route::post('/website-templates/reset',      [\App\Http\Controllers\Tenant\WebsiteTemplatesController::class, 'reset'])->name('tenant.website-templates.reset');
-    Route::post('/website-templates/upload-image', [\App\Http\Controllers\Tenant\WebsiteTemplatesController::class, 'uploadImage'])->name('tenant.website-templates.upload-image');
+    // Website Coupons & Promo Offers (The Derma Co Style)
+    Route::get('/coupons', [\App\Http\Controllers\Tenant\CouponController::class, 'index'])->name('tenant.coupons.index');
+    Route::post('/coupons', [\App\Http\Controllers\Tenant\CouponController::class, 'store'])->name('tenant.coupons.store');
+    Route::put('/coupons/{coupon}', [\App\Http\Controllers\Tenant\CouponController::class, 'update'])->name('tenant.coupons.update');
+    Route::post('/coupons/settings', [\App\Http\Controllers\Tenant\CouponController::class, 'updateSettings'])->name('tenant.coupons.settings');
+    Route::post('/coupons/{coupon}/toggle', [\App\Http\Controllers\Tenant\CouponController::class, 'toggle'])->name('tenant.coupons.toggle');
+    Route::delete('/coupons/{coupon}', [\App\Http\Controllers\Tenant\CouponController::class, 'destroy'])->name('tenant.coupons.destroy');
+
+    // Gift Cards & Store Vouchers Management
+    Route::get('/gift-cards', [\App\Http\Controllers\Tenant\GiftCardController::class, 'index'])->name('tenant.gift-cards.index');
+    Route::post('/gift-cards', [\App\Http\Controllers\Tenant\GiftCardController::class, 'store'])->name('tenant.gift-cards.store');
+    Route::post('/gift-cards/bulk', [\App\Http\Controllers\Tenant\GiftCardController::class, 'bulkGenerate'])->name('tenant.gift-cards.bulk');
+    Route::post('/gift-cards/{giftCard}/toggle', [\App\Http\Controllers\Tenant\GiftCardController::class, 'toggle'])->name('tenant.gift-cards.toggle');
+    Route::post('/gift-cards/{giftCard}/unlock', [\App\Http\Controllers\Tenant\GiftCardController::class, 'unlock'])->name('tenant.gift-cards.unlock');
+    Route::delete('/gift-cards/{giftCard}', [\App\Http\Controllers\Tenant\GiftCardController::class, 'destroy'])->name('tenant.gift-cards.destroy');
+    Route::post('/gift-cards/check', [\App\Http\Controllers\Tenant\GiftCardController::class, 'checkBalance'])->name('tenant.gift-cards.check');
+    Route::post('/gift-cards/redeem-pos', [\App\Http\Controllers\Tenant\GiftCardController::class, 'redeemPos'])->name('tenant.gift-cards.redeem-pos');
+
 
     Route::get('/ping', function () {
         return 'OK'; });
@@ -226,6 +243,21 @@ Route::middleware(['tenant_web', 'auth:tenant'])->group(function () {
         Route::get('instalments', [InstalmentController::class, 'index'])->name('tenant.instalments.index');
         Route::get('instalments/{instalment}', [InstalmentController::class, 'show'])->name('tenant.instalments.show');
         Route::post('instalments/pay', [InstalmentController::class, 'pay'])->name('tenant.instalments.pay');
+    });
+
+    // Agreements (AES-256 Encrypted & Cryptographically Sealed)
+    Route::middleware(['module.permission:Agreements'])->group(function () {
+        Route::get('agreements', [\App\Http\Controllers\Tenant\AgreementController::class, 'index'])->name('tenant.agreements.index');
+        Route::post('agreements', [\App\Http\Controllers\Tenant\AgreementController::class, 'store'])->name('tenant.agreements.store');
+        Route::get('agreements/{agreement}', [\App\Http\Controllers\Tenant\AgreementController::class, 'show'])->name('tenant.agreements.show');
+        Route::put('agreements/{agreement}', [\App\Http\Controllers\Tenant\AgreementController::class, 'update'])->name('tenant.agreements.update');
+        Route::post('agreements/{agreement}/status', [\App\Http\Controllers\Tenant\AgreementController::class, 'updateStatus'])->name('tenant.agreements.status');
+        Route::delete('agreements/{agreement}', [\App\Http\Controllers\Tenant\AgreementController::class, 'destroy'])->name('tenant.agreements.destroy');
+        Route::get('agreements/{agreement}/print', [\App\Http\Controllers\Tenant\AgreementController::class, 'print'])->name('tenant.agreements.print');
+        Route::post('agreements/{agreement}/sign', [\App\Http\Controllers\Tenant\AgreementController::class, 'sign'])->name('tenant.agreements.sign');
+        Route::post('agreements/{agreement}/share-link', [\App\Http\Controllers\Tenant\AgreementController::class, 'generateShareLink'])->name('tenant.agreements.share-link');
+        Route::get('agreements/{agreement}/attachment', [\App\Http\Controllers\Tenant\AgreementController::class, 'downloadAttachment'])->name('tenant.agreements.download-attachment');
+        Route::get('agreements/{agreement}/audit-trail', [\App\Http\Controllers\Tenant\AgreementController::class, 'auditTrail'])->name('tenant.agreements.audit-trail');
     });
 
     // WhatsApp

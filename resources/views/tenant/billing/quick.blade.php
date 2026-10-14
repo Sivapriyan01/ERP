@@ -242,38 +242,77 @@
                 </div>
 
                 <!-- Payment Methods -->
-                <div x-show="!emiStep" class="grid grid-cols-3 md:grid-cols-4 gap-4">
+                <div x-show="!emiStep" class="grid grid-cols-3 md:grid-cols-5 gap-3">
                     <button @click="paymentMode = 'cash'" 
                             :class="paymentMode === 'cash' ? 'border-slate-900 bg-blue-50/50 ring-4 ring-blue-50' : 'border-slate-100 hover:border-blue-200'"
-                            class="flex flex-col items-center justify-center p-5 border-2 rounded-[1.5rem] transition-all gap-3 group">
-                        <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <svg width="20" height="20" class="text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                            class="flex flex-col items-center justify-center p-4 border-2 rounded-[1.5rem] transition-all gap-2 group">
+                        <div class="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <svg width="18" height="18" class="text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                         </div>
                         <span class="text-[9px] font-black uppercase tracking-widest">Cash</span>
                     </button>
                     <button @click="paymentMode = 'card'" 
                             :class="paymentMode === 'card' ? 'border-slate-900 bg-blue-50/50 ring-4 ring-blue-50' : 'border-slate-100 hover:border-blue-200'"
-                            class="flex flex-col items-center justify-center p-5 border-2 rounded-[1.5rem] transition-all gap-3 group">
-                        <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <svg width="20" height="20" class="text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                            class="flex flex-col items-center justify-center p-4 border-2 rounded-[1.5rem] transition-all gap-2 group">
+                        <div class="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <svg width="18" height="18" class="text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
                         </div>
                         <span class="text-[9px] font-black uppercase tracking-widest">Card</span>
                     </button>
                     <button @click="paymentMode = 'upi'" 
                             :class="paymentMode === 'upi' ? 'border-slate-900 bg-blue-50/50 ring-4 ring-blue-50' : 'border-slate-100 hover:border-blue-200'"
-                            class="flex flex-col items-center justify-center p-5 border-2 rounded-[1.5rem] transition-all gap-3 group">
-                        <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <svg width="20" height="20" class="text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h2M4 8h2m1-4h1m15 1h1M4 16h2m8 0h2m-11 4h3m9-15v3m-3.01 0h.01m.01 0h.01M9 20h3.01M8 4h4.01M4 4h4v4H4V4zm12 0h4v4h-4V4zM4 16h4v4H4v-4z"/></svg>
+                            class="flex flex-col items-center justify-center p-4 border-2 rounded-[1.5rem] transition-all gap-2 group">
+                        <div class="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <svg width="18" height="18" class="text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h2M4 8h2m1-4h1m15 1h1M4 16h2m8 0h2m-11 4h3m9-15v3m-3.01 0h.01m.01 0h.01M9 20h3.01M8 4h4.01M4 4h4v4H4V4zm12 0h4v4h-4V4zM4 16h4v4H4v-4z"/></svg>
                         </div>
                         <span class="text-[9px] font-black uppercase tracking-widest">UPI</span>
                     </button>
                     <button @click="paymentMode = 'credit'" 
                             :class="paymentMode === 'credit' ? 'border-slate-900 bg-blue-50/50 ring-4 ring-blue-50' : 'border-slate-100 hover:border-blue-200'"
-                            class="flex flex-col items-center justify-center p-5 border-2 rounded-[1.5rem] transition-all gap-3 group">
-                        <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <svg width="20" height="20" class="text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            class="flex flex-col items-center justify-center p-4 border-2 rounded-[1.5rem] transition-all gap-2 group">
+                        <div class="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <svg width="18" height="18" class="text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         </div>
                         <span class="text-[9px] font-black uppercase tracking-widest">Credit</span>
+                    </button>
+                    <button @click="paymentMode = 'gift_card'" 
+                            :class="paymentMode === 'gift_card' ? 'border-amber-600 bg-amber-50/50 ring-4 ring-amber-100' : 'border-slate-100 hover:border-amber-200'"
+                            class="flex flex-col items-center justify-center p-4 border-2 rounded-[1.5rem] transition-all gap-2 group">
+                        <div class="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <svg width="18" height="18" class="text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V4.5a2.5 2.5 0 115 0v3.5h-5zm0 0H7.5a2.5 2.5 0 110-5H12v5zm-7 4h14a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2z"/>
+                            </svg>
+                        </div>
+                        <span class="text-[9px] font-black uppercase tracking-widest text-slate-800">Gift Card</span>
+                    </button>
+                </div>
+
+                <!-- Gift Card Input & Verification Step -->
+                <div x-show="paymentMode === 'gift_card' && !emiStep" class="space-y-3 animate-fadeIn p-5 bg-amber-50/40 rounded-[2rem] border border-amber-200/60">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-base">🎁</span>
+                            <span class="text-[10px] font-black uppercase tracking-widest text-amber-900">Gift Card Redemption</span>
+                        </div>
+                        <span x-show="giftCardApplied" class="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">✓ Applied</span>
+                    </div>
+
+                    <div>
+                        <label class="text-[9px] font-bold text-slate-500 uppercase block mb-1">Voucher Code</label>
+                        <input type="text" x-model="giftCardCode" placeholder="Enter Gift Card Code (e.g. GC-XXXX)" 
+                               class="w-full px-4 py-2.5 bg-white border border-amber-200 rounded-xl text-xs font-mono font-bold uppercase outline-none focus:ring-2 focus:ring-amber-500">
+                    </div>
+
+                    <div x-show="giftCardError" class="p-2.5 bg-rose-50 text-rose-700 text-xs font-bold rounded-xl border border-rose-200" x-text="giftCardError"></div>
+
+                    <div x-show="giftCardApplied" class="p-3 bg-white rounded-xl border border-emerald-200 flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-700">Verified Card Balance:</span>
+                        <span class="text-base font-black text-emerald-600" x-text="'₹' + Number(giftCardAmount).toFixed(2)"></span>
+                    </div>
+
+                    <button type="button" @click="verifyAndApplyGiftCard()" :disabled="giftCardLoading"
+                            class="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-xs font-black uppercase transition-all disabled:opacity-50 shadow-sm">
+                        <span x-text="giftCardLoading ? 'Verifying Card...' : (giftCardApplied ? 'Re-verify Card' : 'Verify & Apply Gift Card')"></span>
                     </button>
                 </div>
 
@@ -348,6 +387,12 @@
             amountPaid: 0,
             useWallet: false,
             walletAmountUsed: 0,
+            giftCardCode: '',
+            giftCardPin: '',
+            giftCardApplied: false,
+            giftCardAmount: 0,
+            giftCardLoading: false,
+            giftCardError: '',
             emiStep: false,
             emiMonths: 3,
             emiStartDate: new Date().toISOString().split('T')[0],
@@ -360,6 +405,44 @@
             
             init() {
                 console.log('POS Initialized', this.products.length, 'products');
+            },
+
+            async verifyAndApplyGiftCard() {
+                if (!this.giftCardCode) {
+                    this.giftCardError = 'Enter Gift Card Code';
+                    return;
+                }
+                this.giftCardLoading = true;
+                this.giftCardError = '';
+                try {
+                    const res = await fetch('{{ route('tenant.gift-cards.check') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ code: this.giftCardCode })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        const balance = parseFloat(data.current_balance) || 0;
+                        if (balance <= 0) {
+                            this.giftCardError = 'Gift card has zero balance.';
+                            return;
+                        }
+                        this.giftCardApplied = true;
+                        this.giftCardAmount = balance;
+                        this.amountPaid = Math.min(balance, this.getGrandTotal());
+                    } else {
+                        this.giftCardError = data.message || 'Invalid Gift Card';
+                        this.giftCardApplied = false;
+                    }
+                } catch (e) {
+                    this.giftCardError = 'Failed to verify gift card';
+                    this.giftCardApplied = false;
+                } finally {
+                    this.giftCardLoading = false;
+                }
             },
 
             addTab() {
@@ -548,6 +631,7 @@
                     payment_mode: this.paymentMode,
                     amount_paid: this.amountPaid || remainingToPay,
                     wallet_used: this.useWallet ? this.walletAmountUsed : 0,
+                    gift_card_code: this.paymentMode === 'gift_card' ? this.giftCardCode : null,
                     items: tab.items.map(i => ({ id: i.id, qty: i.qty, price: i.mrp }))
                 };
 

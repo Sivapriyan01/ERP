@@ -26,6 +26,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // OWASP A05: Apply security headers on every HTTP response
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
 
+        // Ensure tenancy is ended after every request so that the Tenancy
+        // singleton is reset and the central DB connection is restored.
+        // Required for long-lived processes (php artisan serve / Octane).
+        $middleware->append(\App\Http\Middleware\EnsureTenancyEnded::class);
+
         // Register named middleware aliases
         $middleware->alias([
             'superadmin'           => \App\Http\Middleware\SuperAdmin::class,
@@ -34,6 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'prevent.access.central' => \Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains::class,
             'module.permission'    => \App\Http\Middleware\CheckModulePermission::class,
             'brute.force'          => \App\Http\Middleware\PreventBruteForce::class, // OWASP A07
+            'api.rate'             => \App\Http\Middleware\ApiSecurityRateLimiter::class, // OWASP A04
         ]);
 
         // Tenant web group — applied via RouteServiceProvider for tenant.php routes
@@ -50,6 +56,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->validateCsrfTokens(except: [
             'api/*',
+            'website-settings/test-sms',
         ]);
 
         $middleware->trustProxies(at: '*');

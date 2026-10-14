@@ -36,7 +36,8 @@
         'Vendors', 'User', 'Stock Transfer', 'Product Master', 'WhatsApp',
         'Mail', 'Calendar', 'CRM', 'Instalments', 'Due Invoices',
         'Tally ERP', 'Business Reports', 'Deliveries', 'Anniversary',
-        'Setup', 'Service', 'Membership', 'Accounting', 'Website', 'Website Orders'
+        'Setup', 'Service', 'Membership', 'Accounting', 'Agreements', 'Website', 'Website Orders',
+        'Gift Cards', 'Discount Coupons'
     ],
 
     toggleSelectAll() {

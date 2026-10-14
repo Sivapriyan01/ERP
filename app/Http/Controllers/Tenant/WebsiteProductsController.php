@@ -108,6 +108,54 @@ class WebsiteProductsController extends Controller
         $action = $request->input('action');
         $selectedIds = $request->input('selected_ids', []);
 
+        // If user chose to select all matching items across all pages
+        if ($request->boolean('select_all_matching')) {
+            $query = Category::query();
+
+            // Search filter
+            if ($search = $request->input('search')) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('product_name', 'like', "%{$search}%")
+                      ->orWhere('barcode', 'like', "%{$search}%")
+                      ->orWhere('brand', 'like', "%{$search}%")
+                      ->orWhere('product_type', 'like', "%{$search}%")
+                      ->orWhere('model', 'like', "%{$search}%");
+                });
+            }
+
+            // Status / Website filter
+            $filter = $request->input('filter', 'all');
+            if ($filter === 'website') {
+                $query->where('show_on_website', true);
+            } elseif ($filter === 'hidden') {
+                $query->where(function ($q) {
+                    $q->where('show_on_website', false)->orWhereNull('show_on_website');
+                });
+            } elseif ($filter === 'instock') {
+                $query->where('stock', '>', 0);
+            } elseif ($filter === 'outofstock') {
+                $query->where(function ($q) {
+                    $q->where('stock', '<=', 0)->orWhereNull('stock');
+                });
+            }
+
+            // Category filter
+            if ($category = $request->input('category')) {
+                $query->where('product_type', $category);
+            }
+
+            $count = $query->count();
+            if ($action === 'publish_selected' || $action === 'publish_all') {
+                $query->update(['show_on_website' => true]);
+                return back()->with('success', "All {$count} matching products published to front site successfully!");
+            }
+
+            if ($action === 'hide_selected' || $action === 'hide_all') {
+                $query->update(['show_on_website' => false]);
+                return back()->with('success', "All {$count} matching products hidden from front site.");
+            }
+        }
+
         if ($action === 'publish_all') {
             Category::query()->update(['show_on_website' => true]);
             return back()->with('success', 'All store products published to front site successfully!');

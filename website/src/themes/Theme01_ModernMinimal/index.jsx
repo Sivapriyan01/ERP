@@ -12,7 +12,10 @@ import { erpApi } from '../../services/erpApi';
 import { useCart } from '../common/useCart';
 import CartDrawer from '../common/CartDrawer';
 import CheckoutModal from '../common/CheckoutModal';
+import CouponModal from '../common/CouponModal';
 import OrderTracker from '../common/OrderTracker';
+import AccountDropdown from '../common/AccountDropdown';
+import ProductModal from '../common/ProductModal';
 import { EditableText } from '../common/EditableText';
 import { SectionWrapper } from '../common/SectionWrapper';
 
@@ -164,6 +167,7 @@ export default function Theme01_ModernMinimal({
               {/* Nav buttons */}
               <nav style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginLeft: 'auto' }}>
                 <button onClick={() => setIsTrackerOpen(true)} style={navBtnStyle}>Track Order</button>
+                <AccountDropdown primaryColor={primary} />
                 <button
                   onClick={() => cart.setIsCartOpen(true)}
                   style={{
@@ -283,12 +287,17 @@ export default function Theme01_ModernMinimal({
                           background: '#fff', borderRadius: '16px', overflow: 'hidden',
                           boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
                         }}>
-                          <img
-                            src={p.image}
-                            alt={p.product_name}
-                            style={{ width: '100%', height: '80px', objectFit: 'cover' }}
-                            onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=200'; }}
-                          />
+                          {p.image ? (
+                            <img
+                              src={p.image}
+                              alt={p.product_name}
+                              style={{ width: '100%', height: '80px', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <div style={{ width: '100%', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f1f5f9', color: primary }}>
+                              <Package size={24} />
+                            </div>
+                          )}
                           <div style={{ padding: '0.5rem 0.6rem' }}>
                             <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.3 }}>{p.product_name?.slice(0, 20)}</div>
                             <div style={{ fontSize: '0.7rem', color: primary, fontWeight: 800 }}>₹{p.selling_price?.toLocaleString('en-IN')}</div>
@@ -507,9 +516,15 @@ export default function Theme01_ModernMinimal({
                 </div>
                 <div>
                   <div style={{ fontWeight: 700, color: '#f1f5f9', marginBottom: '0.75rem', fontSize: '0.88rem' }}>Quick Links</div>
-                  {['Track Order', 'Return Policy', 'Privacy Policy', 'Terms of Service'].map((link) => (
-                    <div key={link} style={{ fontSize: '0.82rem', marginBottom: '0.35rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <ChevronRight size={12} style={{ color: primary }} /> {link}
+                  {[
+                    { label: 'Track Order', action: () => setIsTrackerOpen(true) },
+                  ].map((link) => (
+                    <div
+                      key={link.label}
+                      onClick={link.action}
+                      style={{ fontSize: '0.82rem', marginBottom: '0.35rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', transition: 'color 0.2s' }}
+                    >
+                      <ChevronRight size={12} style={{ color: primary }} /> {link.label}
                     </div>
                   ))}
                 </div>
@@ -557,7 +572,22 @@ export default function Theme01_ModernMinimal({
       ))}
 
       {/* Shared Drawers & Modals */}
-      <CartDrawer {...cart} primaryColor={primary} onCheckout={() => { cart.setIsCartOpen(false); setIsCheckoutOpen(true); }} />
+      <CartDrawer
+        {...cart}
+        primaryColor={primary}
+        onOpenCouponModal={() => cart.setIsCouponModalOpen(true)}
+        onRemoveCoupon={cart.removeCoupon}
+        onCheckout={() => { cart.setIsCartOpen(false); setIsCheckoutOpen(true); }}
+      />
+      <CouponModal
+        isOpen={cart.isCouponModalOpen}
+        onClose={() => cart.setIsCouponModalOpen(false)}
+        subtotal={cart.subtotal}
+        appliedCoupon={cart.appliedCoupon}
+        onApplyCoupon={cart.applyCoupon}
+        onRemoveCoupon={cart.removeCoupon}
+        primaryColor={primary}
+      />
       <CheckoutModal
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
@@ -566,11 +596,26 @@ export default function Theme01_ModernMinimal({
         gstAmount={cart.gstAmount}
         shippingCharge={cart.shippingCharge}
         grandTotal={cart.grandTotal}
+        appliedCoupon={cart.appliedCoupon}
+        couponDiscount={cart.couponDiscount}
+        ruleDiscount={cart.ruleDiscount}
+        appliedRules={cart.appliedRules}
+        prepaidDiscount={cart.prepaidDiscount}
+        freeGift={cart.freeGift}
         settings={settings}
         primaryColor={primary}
         onOrderPlaced={() => { cart.clearCart(); }}
       />
       <OrderTracker isOpen={isTrackerOpen} onClose={() => setIsTrackerOpen(false)} primaryColor={primary} />
+
+      {/* Product Detail Modal */}
+      <ProductModal
+        isOpen={!!selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+        product={selectedProduct}
+        primaryColor={primary}
+        onAddToCart={(item, qty) => cart.addToCart(item, qty)}
+      />
 
       <style>{`
         @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.5; } }
@@ -599,13 +644,31 @@ function ProductCard01({ product, primary, onView, onAdd }) {
       }}
     >
       <div style={{ position: 'relative', overflow: 'hidden', height: '200px', background: '#f8fafc' }}>
-        <img
-          src={product.image}
-          alt={product.product_name}
+        {product.image ? (
+          <img
+            src={product.image}
+            alt={product.product_name}
+            onClick={onView}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s ease', transform: hovered ? 'scale(1.05)' : 'scale(1)' }}
+            onError={(e) => { e.currentTarget.style.display = 'none'; const ph = e.currentTarget.parentElement?.querySelector('.product-fallback-ph'); if (ph) ph.style.display = 'flex'; }}
+          />
+        ) : null}
+        <div
+          className="product-fallback-ph"
           onClick={onView}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s ease', transform: hovered ? 'scale(1.05)' : 'scale(1)' }}
-          onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400'; }}
-        />
+          style={{
+            display: product.image ? 'none' : 'flex',
+            width: '100%', height: '100%', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            background: 'linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%)',
+            color: '#94a3b8', gap: '0.4rem', cursor: 'pointer',
+          }}
+        >
+          <Package size={38} style={{ opacity: 0.6, color: primary }} />
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b' }}>
+            {product.category || 'Product'}
+          </span>
+        </div>
         {product.discount > 0 && (
           <div style={{
             position: 'absolute', top: '10px', left: '10px',

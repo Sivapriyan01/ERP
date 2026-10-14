@@ -187,7 +187,7 @@
         <div class="flex items-center justify-between">
             <h3 class="text-base font-black text-slate-900 dark:text-white tracking-tight">Command Center</h3>
             <div class="flex gap-2">
-                @foreach(['All Modules', 'Sales', 'Inventory', 'Manufacturing', 'Customers', 'Reports', 'Settings'] as $filter)
+                @foreach(['All Modules', 'Sales', 'Inventory', 'Manufacturing', 'Customers', 'Agreements', 'Reports', 'Settings'] as $filter)
                     <button 
                         @click="activeTab = '{{ $filter }}'"
                         :class="activeTab === '{{ $filter }}' ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-700'"
@@ -213,6 +213,7 @@
                     ['title' => 'Production', 'icon' => 'manufacturing', 'color' => 'blue', 'category' => 'Manufacturing', 'route' => route('tenant.production.index')],
                     ['title' => 'Customers', 'icon' => 'users', 'color' => 'blue', 'category' => 'Customers', 'route' => route('tenant.customers.index')],
                     ['title' => 'Vendors', 'icon' => 'store-front', 'color' => 'emerald', 'category' => 'Inventory', 'route' => route('tenant.suppliers.index')],
+                    ['title' => 'Agreements', 'icon' => 'document-text', 'color' => 'indigo', 'category' => 'Agreements', 'permission' => 'Agreements', 'route' => route('tenant.agreements.index')],
                     ['title' => 'User', 'icon' => 'user-circle', 'color' => 'slate', 'category' => 'Settings', 'route' => route('tenant.users.index')],
                     ['title' => 'Reports', 'icon' => 'chart-bar', 'color' => 'blue', 'category' => 'Reports', 'route' => route('tenant.reports.index')],
                     ['title' => 'Stock Transfer', 'icon' => 'refresh', 'color' => 'sky', 'category' => 'Inventory', 'route' => route('tenant.stock-transfer.index')],
@@ -270,6 +271,9 @@
                             @case('wrench') <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A4 4 0 002 9.259V12h2a2 2 0 110 4H2v2.741a4 4 0 005.555 3.704l3.197-2.132M15 15l6-6m0 0l-3-3m3 3l-3 3"/></svg> @break
                             @case('badge-check') <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg> @break
                             @case('calculator') <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg> @break
+                            @case('document-text') <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> @break
+                            @case('gift') <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V4.5a2.5 2.5 0 115 0v3.5h-5zm0 0H7.5a2.5 2.5 0 110-5H12v5zm-7 4h14a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2z" /></svg> @break
+                            @case('ticket') <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg> @break
                             @case('globe') <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg> @break
                         @endswitch
                     </div>
@@ -292,7 +296,8 @@
                 <span>Live Storefront :5173</span>
             </a>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {{-- 1. Website Orders --}}
             <a href="{{ route('tenant.website-orders.index') }}" class="glass-card group p-6 rounded-[2rem] flex flex-col items-start gap-4 hover:shadow-2xl transition-all duration-500 border border-transparent hover:-translate-y-1">
                 <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
                     <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -304,6 +309,8 @@
                     <p class="text-[9px] font-bold text-slate-400 dark:text-slate-500 leading-relaxed">Manage live incoming orders, customer details & fulfillment</p>
                 </div>
             </a>
+
+            {{-- 2. Website Products --}}
             <a href="{{ route('tenant.website-products.index') }}" class="glass-card group p-6 rounded-[2rem] flex flex-col items-start gap-4 hover:shadow-2xl transition-all duration-500 border border-transparent hover:-translate-y-1">
                 <div class="w-12 h-12 rounded-2xl bg-fuchsia-50 dark:bg-fuchsia-900/20 text-fuchsia-600 dark:text-fuchsia-400 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
                     <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -320,6 +327,62 @@
                     <p class="text-[9px] font-bold text-slate-400 dark:text-slate-500 leading-relaxed">Add store products to front site & manage live catalog</p>
                 </div>
             </a>
+
+            {{-- 3. Discount Coupons --}}
+            <a href="{{ route('tenant.coupons.index') }}" class="glass-card group p-6 rounded-[2rem] flex flex-col items-start gap-4 hover:shadow-2xl transition-all duration-500 border border-transparent hover:-translate-y-1">
+                <div class="w-12 h-12 rounded-2xl bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <h4 class="text-[13px] font-black text-slate-900 dark:text-white tracking-tight">Discount Coupons</h4>
+                        <span class="px-2 py-0.5 rounded-full text-[8px] font-black bg-teal-50 text-teal-600 dark:bg-teal-900/30 dark:text-teal-300">
+                            {{ \App\Models\Coupon::where('is_active', true)->count() }} Active
+                        </span>
+                    </div>
+                    <p class="text-[9px] font-bold text-slate-400 dark:text-slate-500 leading-relaxed">Promo codes, cart thresholds & free gift tiers for storefront</p>
+                </div>
+            </a>
+
+            {{-- 4. Gift Cards --}}
+            <a href="{{ route('tenant.gift-cards.index') }}" class="glass-card group p-6 rounded-[2rem] flex flex-col items-start gap-4 hover:shadow-2xl transition-all duration-500 border border-transparent hover:-translate-y-1">
+                <div class="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V4.5a2.5 2.5 0 115 0v3.5h-5zm0 0H7.5a2.5 2.5 0 110-5H12v5zm-7 4h14a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <h4 class="text-[13px] font-black text-slate-900 dark:text-white tracking-tight">Gift Cards</h4>
+                        <span class="px-2 py-0.5 rounded-full text-[8px] font-black bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300">
+                            {{ \App\Models\GiftCard::where('status', 'active')->count() }} Active
+                        </span>
+                    </div>
+                    <p class="text-[9px] font-bold text-slate-400 dark:text-slate-500 leading-relaxed">Issue vouchers, manage customer credits & POS/online redemption</p>
+                </div>
+            </a>
+
+            {{-- 5. Store & Shipping --}}
+            <a href="{{ route('tenant.website-settings.index', ['section' => 'store']) }}" class="glass-card group p-6 rounded-[2rem] flex flex-col items-start gap-4 hover:shadow-2xl transition-all duration-500 border border-transparent hover:-translate-y-1">
+                <div class="w-12 h-12 rounded-2xl bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <h4 class="text-[13px] font-black text-slate-900 dark:text-white tracking-tight">Store & Shipping</h4>
+                        <span class="px-2 py-0.5 rounded-full text-[8px] font-black bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-300">
+                            Delivery Rules
+                        </span>
+                    </div>
+                    <p class="text-[9px] font-bold text-slate-400 dark:text-slate-500 leading-relaxed">Storefront identity, free shipping threshold, pincode check & courier SLA</p>
+                </div>
+            </a>
+
+            {{-- 6. Storefront Website --}}
             <a href="http://{{ request()->getHost() }}:5173" target="_blank" class="glass-card group p-6 rounded-[2rem] flex flex-col items-start gap-4 hover:shadow-2xl transition-all duration-500 border border-transparent hover:-translate-y-1">
                 <div class="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
                     <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -328,11 +391,13 @@
                 </div>
                 <div>
                     <h4 class="text-[13px] font-black text-slate-900 dark:text-white tracking-tight mb-1">Storefront Website</h4>
-                    <p class="text-[9px] font-bold text-slate-400 dark:text-slate-500 leading-relaxed">Open customer-facing online catalog and checkout</p>
+                    <p class="text-[9px] font-bold text-slate-400 dark:text-slate-500 leading-relaxed">Open customer-facing online catalog and checkout (:5173)</p>
                 </div>
             </a>
+
+            {{-- 6. Website Settings --}}
             <a href="{{ route('tenant.website-settings.index') }}" class="glass-card group p-6 rounded-[2rem] flex flex-col items-start gap-4 hover:shadow-2xl transition-all duration-500 border border-transparent hover:-translate-y-1">
-                <div class="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                <div class="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
                     <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -340,7 +405,7 @@
                 </div>
                 <div>
                     <h4 class="text-[13px] font-black text-slate-900 dark:text-white tracking-tight mb-1">Website Settings</h4>
-                    <p class="text-[9px] font-bold text-slate-400 dark:text-slate-500 leading-relaxed">Configure MSG91 OTP, SMS gateway, store details & policies</p>
+                    <p class="text-[9px] font-bold text-slate-400 dark:text-slate-500 leading-relaxed">Configure MSG91 OTP, coupons, gift cards, SEO & store policies</p>
                 </div>
             </a>
         </div>
